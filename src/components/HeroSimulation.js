@@ -25,8 +25,10 @@ export default function HeroSimulation() {
             .style("background", "#0a0a0a") // Neutral-950
             .style("display", "block");
 
+        // Initial nodes setup
         const numNodes = 150;
-        // Pre-calculate which nodes fall into the 95% Failure bracket for Scene 2
+        const initialMetrics = useStore.getState().metrics; // Get initial metrics using getState()
+
         const nodes = Array.from({ length: numNodes }, (_, i) => ({
             id: i,
             r: Math.random() * 5 + 2,
@@ -34,7 +36,7 @@ export default function HeroSimulation() {
             y: Math.random() * height,
             vx: 0,
             vy: 0,
-            isFailure: i < numNodes * 0.95 // 95% marked for failure
+            isFailure: i < numNodes * (initialMetrics.illiteracy / 100) // dynamically applied
         }));
         nodesRef.current = nodes;
 
@@ -224,6 +226,16 @@ export default function HeroSimulation() {
         simulation.alpha(0.8).restart();
 
     }, [currentScene]);
+
+    // Update failure nodes dynamically when CSV data loads
+    const metrics = useStore(state => state.metrics);
+    useEffect(() => {
+        if (!nodesRef.current || nodesRef.current.length === 0) return;
+        const numNodes = nodesRef.current.length;
+        nodesRef.current.forEach((node, i) => {
+            node.isFailure = i < numNodes * (metrics.illiteracy / 100);
+        });
+    }, [metrics.illiteracy]);
 
     return <div ref={containerRef} className="w-full h-full bg-neutral-950 pointer-events-auto" />;
 }

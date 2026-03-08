@@ -1,44 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, BarChart3, TrendingDown, Layers, Target, Activity } from 'lucide-react';
 import useStore from '../store/useStore';
 import HeroSimulation from '../components/HeroSimulation';
-
-const SCENE_CONTENT = [
-  {
-    title: "El Ecosistema Inestable: La fricción estructural.",
-    callout: "70%",
-    calloutText: "de los proyectos creativos fracasan por mala gestión administrativa.",
-    icon: Activity
-  },
-  {
-    title: "Los Puntos de Dolor: Parálisis y Dispersión.",
-    callout: "294€",
-    calloutText: "Cuota de autónomos mensual ignorando los ingresos reales.",
-    icon: Layers
-  },
-  {
-    title: "El Muro: El 95% sufre analfabetismo fiscal al graduarse.",
-    callout: "95%",
-    calloutText: "de los estudiantes de creatividad desconocen cómo emitir una factura legal.",
-    icon: TrendingDown
-  },
-  {
-    title: "Design Thinking: Diseñar para el cambio, no por azar.",
-    callout: "Data-Driven",
-    calloutText: "Decisiones iterativas basadas en métricas reales de los propios alumnos.",
-    icon: Target
-  },
-  {
-    title: "La Solución: La Junior Empresa como parachoques administrativo.",
-    callout: "0€",
-    calloutText: "Fugas fiscales iniciales. 100% del ecosistema protegido institucionalmente.",
-    icon: BarChart3
-  }
-];
+import { fetchAndParseCSV, getFiscalIlliteracyRate, getIncubatorUsage } from '../services/csvLoader';
 
 const SceneCard = ({ content, index }) => {
   const ref = useRef(null);
@@ -68,12 +36,12 @@ const SceneCard = ({ content, index }) => {
         <div className="flex-1">
           <div className="flex items-center gap-4 mb-6 md:mb-10 text-neutral-400">
             <span className="text-xl md:text-2xl tracking-[0.2em] font-black uppercase text-white/50">
-              0{index + 1}
+              Acto 0{index + 1}
             </span>
             <div className="h-px bg-white/20 flex-grow"></div>
             <Icon className="w-8 h-8 text-white/30" />
           </div>
-          <h2 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight leading-[0.9] text-white balance-text">
+          <h2 className="text-4xl md:text-5xl lg:text-7xl font-black uppercase tracking-tight leading-[0.9] text-white balance-text">
             {content.title}
           </h2>
         </div>
@@ -95,6 +63,54 @@ const SceneCard = ({ content, index }) => {
 };
 
 export default function Home() {
+  const [localMetrics, setLocalMetrics] = useState({ illiteracy: 95, incubatorNonUsage: 87.2 });
+  const setStoreMetrics = useStore(state => state.setMetrics);
+
+  useEffect(() => {
+    async function loadRealData() {
+      const data = await fetchAndParseCSV('/CSV/estudio_tfm.csv');
+      const illiteracy = getFiscalIlliteracyRate(data);
+      const incubatorNonUsage = getIncubatorUsage(data);
+
+      setLocalMetrics({ illiteracy, incubatorNonUsage });
+      setStoreMetrics({ illiteracy, incubatorNonUsage });
+    }
+    loadRealData();
+  }, [setStoreMetrics]);
+
+  const SCENE_CONTENT = [
+    {
+      title: "El Ecosistema Inestable: La fricción estructural.",
+      callout: `${localMetrics.incubatorNonUsage}%`,
+      calloutText: "de los alumnos desconoce o no utiliza las herramientas de incubación de la facultad.",
+      icon: Activity
+    },
+    {
+      title: "Los Puntos de Dolor: Parálisis y Dispersión.",
+      callout: "294€",
+      calloutText: "Cuota de autónomos mensual ignorando los ingresos reales.",
+      icon: Layers
+    },
+    {
+      title: "El Muro: Analfabetismo fiscal masivo al graduarse.",
+      callout: `${localMetrics.illiteracy}%`,
+      calloutText: "de los estudiantes terminan su carrera sin saber emitir una factura legal.",
+      icon: TrendingDown
+    },
+    {
+      title: "Design Thinking: Diseñar para el cambio, no por azar.",
+      callout: "Data-Driven",
+      calloutText: "Decisiones iterativas basadas en métricas reales de los propios alumnos.",
+      icon: Target
+    },
+    {
+      title: "La Solución: La Junior Empresa como parachoques.",
+      callout: "0€",
+      calloutText: "Fugas fiscales iniciales. 100% del ecosistema protegido institucionalmente.",
+      icon: BarChart3
+    }
+  ];
+
   return (
     <div className="relative w-full overflow-hidden bg-neutral-950 font-sans">
 

@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 
 const useStore = create((set) => ({
-  userProfile: null, // null | 'creative' | 'technical'
-  currentScrollScene: 0,
-  liveDataStatus: 'loading', // 'loading' | 'success' | 'error'
+    userProfile: null, // 'creative' | 'technical' | null
+    setUserProfile: (profile) => set({ userProfile: profile }),
 
-  setUserProfile: (profile) => set({ userProfile: profile }),
-  setCurrentScrollScene: (scene) => set({ currentScrollScene: scene }),
-  setLiveDataStatus: (status) => set({ liveDataStatus: status }),
+    currentScrollScene: 0,
+    setCurrentScrollScene: (scene) => set({ currentScrollScene: scene }),
+
+    liveDataStatus: 'loading', // 'loading' | 'success' | 'error'
+    setLiveDataStatus: (status) => set({ liveDataStatus: status }),
+
+    metrics: { illiteracy: 95, incubatorNonUsage: 87.2 },
+    setMetrics: (newMetrics) => set({ metrics: newMetrics })
 }));
 
 export default useStore;
