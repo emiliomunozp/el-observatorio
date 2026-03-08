@@ -9,13 +9,8 @@ export default function DashboardLayoutWrapper({ children }) {
     const pathname = usePathname();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-    // Home page uses pure layout, hides dashboard elements
-    if (pathname === '/') {
-        return <main className="flex-grow">{children}</main>;
-    }
-
     return (
-        <div className="flex h-screen overflow-hidden bg-neutral-950">
+        <div className="flex h-screen overflow-hidden bg-slate-50">
             <Header toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
             <div className="flex-1 flex overflow-hidden">

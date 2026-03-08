@@ -3,15 +3,3 @@
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
-
-body {
-  /* Using exact colors requested in layout: bg-neutral-950 text-neutral-50 */
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}

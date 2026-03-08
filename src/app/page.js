@@ -1,167 +1,168 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
-import { motion, useInView } from 'framer-motion';
-import { ArrowRight, BarChart3, TrendingDown, Layers, Target, Activity } from 'lucide-react';
-import useStore from '../store/useStore';
-import HeroSimulation from '../components/HeroSimulation';
-import { fetchAndParseCSV, getFiscalIlliteracyRate, getIncubatorUsage } from '../services/csvLoader';
+import React, { useEffect, useState } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts';
+import { loadTFMData, getFiscalIlliteracy, getPreincubatorUsage, getFearsData } from '@/services/csvParser';
+import { AlertTriangle, Info } from 'lucide-react';
 
-const SceneCard = ({ content, index }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { margin: "-50% 0px -50% 0px" });
-  const setCurrentScrollScene = useStore(state => state.setCurrentScrollScene);
-  const Icon = content.icon;
-
-  useEffect(() => {
-    if (isInView) {
-      setCurrentScrollScene(index);
-    }
-  }, [isInView, index, setCurrentScrollScene]);
-
-  return (
-    <section
-      ref={ref}
-      className="min-h-[120vh] flex items-center justify-center relative z-10 p-4 lg:p-12 pointer-events-none"
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 50 }}
-        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-        viewport={{ once: false, margin: "-10%" }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="max-w-6xl w-full bg-black/60 backdrop-blur-xl border border-white/10 p-8 md:px-16 md:py-20 pointer-events-auto shadow-2xl rounded-2xl flex flex-col md:flex-row gap-12 items-center"
-      >
-        {/* Left Side: Brutalist Typography */}
-        <div className="flex-1">
-          <div className="flex items-center gap-4 mb-6 md:mb-10 text-neutral-400">
-            <span className="text-xl md:text-2xl tracking-[0.2em] font-black uppercase text-white/50">
-              Acto 0{index + 1}
-            </span>
-            <div className="h-px bg-white/20 flex-grow"></div>
-            <Icon className="w-8 h-8 text-white/30" />
-          </div>
-          <h2 className="text-4xl md:text-5xl lg:text-7xl font-black uppercase tracking-tight leading-[0.9] text-white balance-text">
-            {content.title}
-          </h2>
-        </div>
-
-        {/* Right Side: Data Callout Sparkline */}
-        <div className="md:w-1/3 flex border-l border-white/10 pl-10 items-center justify-center">
-          <div className="text-center md:text-left">
-            <span className={`block text-6xl md:text-8xl font-black mb-4 tracking-tighter ${index === 2 ? 'text-red-500' : 'text-[#00ff99]'}`}>
-              {content.callout}
-            </span>
-            <p className="text-neutral-400 text-sm md:text-base font-medium uppercase tracking-widest leading-relaxed">
-              {content.calloutText}
-            </p>
-          </div>
-        </div>
-      </motion.div>
-    </section>
-  );
-};
-
-export default function Home() {
-  const [localMetrics, setLocalMetrics] = useState({ illiteracy: 95, incubatorNonUsage: 87.2 });
-  const setStoreMetrics = useStore(state => state.setMetrics);
+export default function Dashboard() {
+  const [data, setData] = useState({
+    illiteracy: 0,
+    preincubatorNonUsers: 0,
+    fears: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function loadRealData() {
-      const data = await fetchAndParseCSV('/CSV/estudio_tfm.csv');
-      const illiteracy = getFiscalIlliteracyRate(data);
-      const incubatorNonUsage = getIncubatorUsage(data);
-
-      setLocalMetrics({ illiteracy, incubatorNonUsage });
-      setStoreMetrics({ illiteracy, incubatorNonUsage });
+    async function initData() {
+      try {
+        const rawData = await loadTFMData();
+        setData({
+          illiteracy: getFiscalIlliteracy(rawData),
+          preincubatorNonUsers: getPreincubatorUsage(rawData),
+          fears: getFearsData(rawData)
+        });
+      } catch (err) {
+        setError("Error loading dashboard data.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
-    loadRealData();
-  }, [setStoreMetrics]);
+    initData();
+  }, []);
 
-  const SCENE_CONTENT = [
-    {
-      title: "El Ecosistema Inestable: La fricción estructural.",
-      callout: `${localMetrics.incubatorNonUsage}%`,
-      calloutText: "de los alumnos desconoce o no utiliza las herramientas de incubación de la facultad.",
-      icon: Activity
-    },
-    {
-      title: "Los Puntos de Dolor: Parálisis y Dispersión.",
-      callout: "294€",
-      calloutText: "Cuota de autónomos mensual ignorando los ingresos reales.",
-      icon: Layers
-    },
-    {
-      title: "El Muro: Analfabetismo fiscal masivo al graduarse.",
-      callout: `${localMetrics.illiteracy}%`,
-      calloutText: "de los estudiantes terminan su carrera sin saber emitir una factura legal.",
-      icon: TrendingDown
-    },
-    {
-      title: "Design Thinking: Diseñar para el cambio, no por azar.",
-      callout: "Data-Driven",
-      calloutText: "Decisiones iterativas basadas en métricas reales de los propios alumnos.",
-      icon: Target
-    },
-    {
-      title: "La Solución: La Junior Empresa como parachoques.",
-      callout: "0€",
-      calloutText: "Fugas fiscales iniciales. 100% del ecosistema protegido institucionalmente.",
-      icon: BarChart3
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-red-600 bg-red-50 border border-red-200 rounded-lg m-8">
+        {error}
+      </div>
+    );
+  }
+
+  const COLORS = ['#3b82f6', '#e2e8f0']; // Blue for unused, Light gray for used
+  const donutData = [
+    { name: 'Desconocen/No usan', value: data.preincubatorNonUsers },
+    { name: 'Usuario Activo', value: 100 - data.preincubatorNonUsers }
   ];
 
   return (
-    <div className="relative w-full overflow-hidden bg-neutral-950 font-sans">
+    <div className="p-8 max-w-7xl mx-auto min-h-screen pb-24 font-sans text-slate-900 bg-slate-50">
+      <div className="mb-10">
+        <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-2">Observatorio Estratégico</h1>
+        <p className="text-slate-500 text-lg">Métricas clave de fricción estructural en el ecosistema emprendedor.</p>
+      </div>
 
-      {/* SaaS Glassmorphism Top Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-white text-black flex items-center justify-center font-black text-xl">
-            O
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+        {/* Card 1: KPI Illiteracy */}
+        <div className="col-span-1 bg-white border border-slate-200 rounded-2xl p-8 flex flex-col justify-center relative overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 text-red-600 font-semibold mb-4 text-sm uppercase tracking-wider">
+            <AlertTriangle className="w-5 h-5" />
+            Fricción Estructural
           </div>
-          <span className="text-white font-bold tracking-widest uppercase text-sm">El Observatorio</span>
+          <h2 className="text-xl font-medium text-slate-600 mb-2">Analfabetismo Fiscal</h2>
+          <div className="text-7xl font-black text-slate-900 tracking-tighter">
+            {data.illiteracy}<span className="text-4xl text-slate-400">%</span>
+          </div>
+          <p className="mt-4 text-sm text-slate-500 leading-relaxed">
+            De los alumnos se graduará sin los conocimientos administrativos mínimos para operar legalmente.
+          </p>
         </div>
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 bg-[#00ff99] text-black px-5 py-2.5 rounded-full font-bold uppercase text-xs tracking-wider hover:bg-white transition-colors"
-        >
-          Acceder al Dashboard <ArrowRight className="w-4 h-4" />
-        </Link>
-      </nav>
 
-      {/* Immersive D3 Background */}
-      <div className="fixed inset-0 z-0">
-        <HeroSimulation />
-      </div>
+        {/* Card 2: Donut Chart - Incubator */}
+        <div className="col-span-1 lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-slate-900">Uso de Preincubadora (AS009)</h2>
+            <Info className="w-4 h-4 text-slate-400" />
+          </div>
+          <p className="text-sm text-slate-500 mb-6">Penetración actual del servicio institucional.</p>
 
-      {/* Scrollable Foreground Container */}
-      <div className="relative z-10 pb-[10vh] pointer-events-none pt-24">
-        {SCENE_CONTENT.map((content, i) => (
-          <SceneCard key={i} content={content} index={i} />
-        ))}
-      </div>
+          <div className="flex-1 min-h-[200px] relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={donutData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {donutData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => `${value.toFixed(1)}%`}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
 
-      {/* Huge Bottom CTA */}
-      <div className="relative z-10 flex flex-col items-center justify-center pb-40 pt-20 px-4 pointer-events-none">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false }}
-          className="pointer-events-auto text-center"
-        >
-          <Link
-            href="/simulador"
-            className="group inline-flex items-center justify-center gap-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)] px-12 py-8 rounded-full hover:scale-105 transition-all duration-300"
-          >
-            <span className="font-black uppercase tracking-[0.2em] text-xl md:text-2xl">
-              Probar el Simulador
-            </span>
-            <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center group-hover:rotate-45 transition-transform duration-300">
-              <ArrowRight className="w-6 h-6" />
+            {/* Center Text */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-3xl font-bold text-slate-900">{data.preincubatorNonUsers}%</span>
+              <span className="text-xs text-slate-500 font-medium">No Usuarios</span>
             </div>
-          </Link>
-        </motion.div>
+          </div>
+        </div>
+
+        {/* Card 3: Horizontal Bar Chart - Fears */}
+        <div className="col-span-1 lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-slate-900">Miedos y Preocupaciones (Día Cero)</h2>
+            <p className="text-sm text-slate-500">Motivos de bloqueo o parálisis al finalizar la carrera (Múltiple elección).</p>
+          </div>
+
+          <div className="h-[300px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data.fears}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+              >
+                <XAxis
+                  type="number"
+                  hide={true} // Hide numbers to make it cleaner
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={220} // Give enough room for explicit text
+                  tick={{ fill: '#475569', fontSize: 12, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px' }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="#0ea5e9" // light blue
+                  radius={[0, 4, 4, 0]}
+                  barSize={24}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
       </div>
     </div>
   );

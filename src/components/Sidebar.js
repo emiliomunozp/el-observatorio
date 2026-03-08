@@ -26,7 +26,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }) {
 
     return (
         <aside
-            className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out bg-neutral-900 border-r border-neutral-800 flex flex-col pt-16
+            className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col pt-16
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
         >
@@ -42,8 +42,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }) {
                                     href={item.href}
                                     className={`flex items-center p-2 rounded-lg group transition-colors duration-200
                     ${isActive
-                                            ? 'bg-neutral-800 text-neutral-50'
-                                            : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-50'
+                                            ? 'bg-slate-100 text-blue-600'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                         }
                   `}
                                 >
