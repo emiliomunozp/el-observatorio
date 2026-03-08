@@ -1,69 +1,104 @@
 import axios from 'axios';
 import { z } from 'zod';
+import Papa from 'papaparse';
 
-// Zod Schemas for Validation with safe fallbacks
-const MacroDataSchema = z.object({
-    year: z.number().catch(new Date().getFullYear()),
-    artsFriction: z.number().catch(0.85),
-    stemFriction: z.number().catch(0.15),
-}).array();
+// ==========================================
+// ZOD SCHEMAS
+// ==========================================
 
-const MarketPulseSchema = z.object({
-    designRatios: z.number().catch(10),
-    engineeringRatios: z.number().catch(1),
+const SurveyRecordSchema = z.object({
+    id: z.string().or(z.number()).transform(v => String(v)).catch(() => "unknown"),
+    Timestamp: z.string().catch(""),
+    Estudios: z.string().catch("Desconocido"),
+    Nivel_Analfabetismo_Fiscal: z.string().transform(v => parseFloat(v) || 0).catch(95),
 });
 
-const InternalSurveySchema = z.object({
-    id: z.string().or(z.number()).transform(v => String(v)).catch("unknown"),
-    fiscalIlliteracy: z.number().or(z.string().transform(v => parseFloat(v) || 0)).catch(95),
-    confidenceLevel: z.number().min(0).max(100).catch(10),
-}).array();
+const SurveyResponseSchema = z.array(SurveyRecordSchema);
 
-// Simulated API Calls (Currently returning mocked safe data structured like the intended APIs)
-export const fetchMacroData = async () => {
+const ProjectRecordSchema = z.object({
+    id: z.string().or(z.number()).transform(v => String(v)).catch(() => "unknown"),
+    projectName: z.string().catch("Proyecto sin nombre"),
+    client: z.string().catch("Cliente no especificado"),
+    designPhase: z.enum(["Ideation", "Prototyping", "Testing"]).catch("Ideation"),
+    assignedTeam: z.string().catch("Sin asignar"),
+});
+
+const ProjectResponseSchema = z.array(ProjectRecordSchema);
+
+// ==========================================
+// HELPERS
+// ==========================================
+
+/**
+ * Fetches and parses a public CSV from a Google Sheet URL.
+ */
+const fetchAndParseCSV = async (url) => {
+    const response = await axios.get(url, { responseType: 'text' });
+
+    return new Promise((resolve, reject) => {
+        Papa.parse(response.data, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => resolve(results.data),
+            error: (error) => reject(error),
+        });
+    });
+};
+
+// ==========================================
+// DATA FETCHING FUNCTIONS
+// ==========================================
+
+export const fetchSurveyData = async () => {
     try {
-        // In a real scenario: const response = await axios.get('/api/ine/macro');
-        // return MacroDataSchema.parse(response.data);
+        // Replace this placeholder URL with your actual Google Sheets CSV export link via .env.local
+        const CSV_URL = process.env.NEXT_PUBLIC_SURVEY_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ.../pub?output=csv';
 
-        // Simulating INE Data
-        const mockData = [
-            { year: 2023, artsFriction: 0.82, stemFriction: 0.12 },
-            { year: 2024, artsFriction: 0.85, stemFriction: 0.14 },
-            { year: 2025, artsFriction: 0.88, stemFriction: 0.15 },
-        ];
-        return MacroDataSchema.parse(mockData);
+        // Fallback if no URL is provided locally for testing
+        if (CSV_URL.includes("...")) {
+            console.warn("Survey CSV URL not configured. Returning fallback data.");
+            return {
+                data: SurveyResponseSchema.parse([
+                    { id: "1", Timestamp: "2023-10-01", Estudios: "Diseño Gráfico", Nivel_Analfabetismo_Fiscal: "98" }
+                ]),
+                error: null
+            };
+        }
+
+        const rawData = await fetchAndParseCSV(CSV_URL);
+        const validatedData = SurveyResponseSchema.parse(rawData);
+
+        return { data: validatedData, error: null };
     } catch (error) {
-        console.error("Error fetching Macro Data:", error);
-        // Fallback data to prevent D3 crashes
-        return [{ year: 2026, artsFriction: 0.90, stemFriction: 0.10 }];
+        console.error("Error fetching or parsing survey data:", error);
+        return { data: null, error: error.message || "Failed to fetch survey data" };
     }
 };
 
-export const fetchMarketPulse = async () => {
+export const fetchActiveProjects = async () => {
     try {
-        // Simulating Live Job Offer Ratios
-        const mockData = {
-            designRatios: 12.5, // 12.5 applicants per design job
-            engineeringRatios: 1.2, // 1.2 applicants per engineering job
-        };
-        return MarketPulseSchema.parse(mockData);
-    } catch (error) {
-        console.error("Error fetching Market Pulse:", error);
-        return { designRatios: 10, engineeringRatios: 1 };
-    }
-};
+        // Replace this placeholder URL with your actual Google Sheets CSV export link via .env.local
+        const CSV_URL = process.env.NEXT_PUBLIC_PROJECTS_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR.../pub?output=csv';
 
-export const fetchInternalSurvey = async () => {
-    try {
-        // Simulating UCM Google Forms parsing
-        const mockData = [
-            { id: "1", fiscalIlliteracy: "96.5", confidenceLevel: 5 },
-            { id: "2", fiscalIlliteracy: 94, confidenceLevel: 12 },
-            { id: "3", fiscalIlliteracy: "invalid_string", confidenceLevel: 8 },
-        ];
-        return InternalSurveySchema.parse(mockData);
+        // Fallback if no URL is provided locally for testing
+        if (CSV_URL.includes("...")) {
+            console.warn("Projects CSV URL not configured. Returning fallback data.");
+            return {
+                data: ProjectResponseSchema.parse([
+                    { id: "P1", projectName: "Rebranding MUPAI", client: "MUPAI", designPhase: "Ideation", assignedTeam: "Equipo Alfa" },
+                    { id: "P2", projectName: "App Observatorio", client: "UCM", designPhase: "Prototyping", assignedTeam: "Equipo Beta" },
+                    { id: "P3", projectName: "Campaña Captación", client: "Facultad BBAA", designPhase: "Testing", assignedTeam: "Equipo Gamma" }
+                ]),
+                error: null
+            };
+        }
+
+        const rawData = await fetchAndParseCSV(CSV_URL);
+        const validatedData = ProjectResponseSchema.parse(rawData);
+
+        return { data: validatedData, error: null };
     } catch (error) {
-        console.error("Error fetching Internal Survey:", error);
-        return [{ id: "fallback", fiscalIlliteracy: 95, confidenceLevel: 10 }];
+        console.error("Error fetching or parsing active projects:", error);
+        return { data: null, error: error.message || "Failed to fetch active projects" };
     }
 };

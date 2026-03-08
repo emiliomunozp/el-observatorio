@@ -36,45 +36,46 @@ const SankeyChart = ({ budget }) => {
         // But rather showing two completely separate flows starting from the same amount.
         // For Sankey to not look broken with varying sources, we'll create two source nodes.
 
-        // Path A: Freelance
-        const cuotaBase = 294; // approx flat rate
-        const irpfRate = 0.15;
+        // Real-world Fiscal Math:
+        // Path A: Freelance (Autónomo)
+        const baseA = budget;
         const ivaRate = 0.21;
+        const irpfRate = 0.15;
+        const cuotaAutonomo = 294; // Flat average monthly quota in Spain
 
-        const irpfExtr = budget * irpfRate;
-        const ivaExtr = budget * ivaRate;
-        let pathAMargin = budget - cuotaBase - irpfExtr - ivaExtr;
-        pathAMargin = pathAMargin < 0 ? 0 : pathAMargin; // clamp to 0 for viz
+        const ivaLeak = baseA * ivaRate;
+        const irpfLeak = baseA * irpfRate;
+
+        let profitA = baseA - ivaLeak - irpfLeak - cuotaAutonomo;
+        if (profitA < 0) profitA = 0; // Prevent negative Sankey flows
 
         // Path B: Junior Enterprise
-        // Almost 0 initial tax leak in kind-payment model. Maybe a 5% admin fee.
-        const adminFeeRate = 0.05;
-        const adminFeeExtr = budget * adminFeeRate;
-        let pathBMargin = budget - adminFeeExtr;
+        const baseB = budget;
+        // 0% immediate tax leak (handled via university/association exemptions)
+        // 100% goes to the student "Bolsa de Horas" or material purchases
+        const profitB = baseB;
 
         const data = {
             nodes: [
-                { id: "Ingreso Ficticio A (Autónomo)", group: "A" }, // 0
-                { id: "Ingreso Ficticio B (Junior Empresa)", group: "B" }, // 1
+                { id: "Ingreso Base (Autónomo)", group: "A" },
+                { id: "Ingreso Base (Junior Empresa)", group: "B" },
 
-                { id: "Cuota Autónomo", group: "LeakA" }, // 2
-                { id: "IRPF", group: "LeakA" }, // 3
-                { id: "IVA", group: "LeakA" }, // 4
-                { id: "Beneficio Real (A)", group: "MarginA" }, // 5
+                { id: "Cuota Autónomo", group: "LeakA" },
+                { id: "IRPF (15%)", group: "LeakA" },
+                { id: "IVA (21%)", group: "LeakA" },
+                { id: "Beneficio Neto Real", group: "MarginA" },
 
-                { id: "Gastos Gestión", group: "LeakB" }, // 6
-                { id: "Bolsa Horas / Material / Licencias", group: "MarginB" }, // 7
+                { id: "Bolsa Horas / Material", group: "MarginB" },
             ],
             links: [
-                // Path A connections
-                { source: 0, target: 2, value: cuotaBase > budget ? budget : cuotaBase },
-                { source: 0, target: 3, value: irpfExtr },
-                { source: 0, target: 4, value: ivaExtr },
-                { source: 0, target: 5, value: pathAMargin },
+                // Path A (Freelance) flow
+                { source: "Ingreso Base (Autónomo)", target: "Cuota Autónomo", value: cuotaAutonomo > baseA ? baseA : cuotaAutonomo },
+                { source: "Ingreso Base (Autónomo)", target: "IRPF (15%)", value: irpfLeak },
+                { source: "Ingreso Base (Autónomo)", target: "IVA (21%)", value: ivaLeak },
+                { source: "Ingreso Base (Autónomo)", target: "Beneficio Neto Real", value: profitA || 0.001 },
 
-                // Path B connections
-                { source: 1, target: 6, value: adminFeeExtr },
-                { source: 1, target: 7, value: pathBMargin },
+                // Path B (Junior Enterprise) flow
+                { source: "Ingreso Base (Junior Empresa)", target: "Bolsa Horas / Material", value: profitB },
             ]
         };
 
