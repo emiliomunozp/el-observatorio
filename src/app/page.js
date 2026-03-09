@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { loadTFMData, getFiscalIlliteracy, getPreincubatorUsage, getFearsData } from '@/services/csvParser';
+import { getDashboardMetrics } from '@/services/dataPipeline';
 import { AlertTriangle, Info } from 'lucide-react';
 
 export default function Dashboard() {
@@ -20,11 +20,11 @@ export default function Dashboard() {
   useEffect(() => {
     async function initData() {
       try {
-        const rawData = await loadTFMData();
+        const metrics = await getDashboardMetrics();
         setData({
-          illiteracy: getFiscalIlliteracy(rawData),
-          preincubatorNonUsers: getPreincubatorUsage(rawData),
-          fears: getFearsData(rawData)
+          illiteracy: metrics.fiscalIlliteracy,
+          preincubatorNonUsers: metrics.preincubatorNonUsers,
+          fears: metrics.fears
         });
       } catch (err) {
         setError("Error loading dashboard data.");

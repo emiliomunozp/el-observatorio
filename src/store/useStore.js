@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 const useStore = create((set) => ({
-    userProfile: null, // 'creative' | 'technical' | null
-    setUserProfile: (profile) => set({ userProfile: profile }),
+    profile: null,
+    setProfile: (profile) => set({ profile }),
 
     currentScrollScene: 0,
     setCurrentScrollScene: (scene) => set({ currentScrollScene: scene }),

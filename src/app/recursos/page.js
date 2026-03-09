@@ -1,78 +1,88 @@
 'use client';
 
-import React from 'react';
-import { FileText, Download, FileSpreadsheet, FileBadge } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, FileText, Download, FileSpreadsheet, File } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchResources } from '@/services/api';
 
-const RESOURCES = [
-    {
-        id: 1,
-        title: "Plantilla de Presupuesto",
-        description: "Formato oficial para presentar propuestas económicas a clientes respetando la estructura de Junior Empresa.",
-        icon: FileSpreadsheet,
-        type: "Excel (.xlsx)"
-    },
-    {
-        id: 2,
-        title: "Guía de Facturación UCM",
-        description: "Instrucciones paso a paso para procesar pagos a través de la infraestructura fiscal de la universidad.",
-        icon: FileText,
-        type: "PDF (.pdf)"
-    },
-    {
-        id: 3,
-        title: "Estatutos Junior Empresa",
-        description: "Documento fundacional y normativa interna de la asociación El Observatorio J.E.",
-        icon: FileBadge,
-        type: "PDF (.pdf)"
-    },
-    {
-        id: 4,
-        title: "Contrato de Prestación de Servicios",
-        description: "Modelo de contrato legal estándar para proyectos con partes externas y entidades privadas.",
-        icon: FileText,
-        type: "Word (.docx)"
-    }
-];
+const getFileIcon = (type) => {
+    if (type.includes('PDF')) return <FileText className="w-8 h-8 text-red-500" />;
+    if (type.includes('Excel')) return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
+    if (type.includes('Word')) return <FileText className="w-8 h-8 text-blue-500" />;
+    return <File className="w-8 h-8 text-slate-500" />;
+};
 
 export default function RecursosPage() {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const { data: resources = [], isLoading } = useQuery({
+        queryKey: ['resources'],
+        queryFn: fetchResources,
+    });
+
+    const filteredResources = resources.filter(res =>
+        res.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        res.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
-        <div className="p-8 max-w-7xl mx-auto min-h-screen pb-24">
+        <div className="p-8 max-w-7xl mx-auto min-h-screen pb-24 bg-slate-50 font-sans text-slate-900">
             <div className="mb-10">
-                <h1 className="text-3xl font-light text-neutral-50 tracking-wide mb-2">Recursos</h1>
-                <p className="text-neutral-400">Documentación, plantillas y guías oficiales de la Junior Empresa.</p>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-2">Centro de Recursos</h1>
+                <p className="text-slate-500 text-lg">Documentación oficial, plantillas y guías de la Junior Empresa.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {RESOURCES.map((resource) => {
-                    const Icon = resource.icon;
+            <div className="relative mb-8 max-w-2xl">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                    type="text"
+                    placeholder="Buscar plantillas, contratos, guías..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-12 pr-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-sm"
+                />
+            </div>
 
-                    return (
-                        <div
-                            key={resource.id}
-                            className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors flex flex-col h-full group"
-                        >
-                            <div className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center mb-6 text-neutral-400 group-hover:text-white group-hover:bg-neutral-700 transition-all">
-                                <Icon className="w-6 h-6" />
+            {isLoading ? (
+                <div className="flex justify-center items-center h-48">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredResources.map((resource) => (
+                        <div key={resource.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col hover:shadow-md transition-shadow group">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    {getFileIcon(resource.type)}
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                                    {resource.type}
+                                </span>
                             </div>
 
-                            <h3 className="text-lg font-medium text-neutral-100 mb-2">{resource.title}</h3>
-                            <p className="text-sm text-neutral-400 mb-6 flex-grow leading-relaxed">
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2 leading-tight">{resource.title}</h3>
+                            <p className="text-sm text-slate-600 mb-6 flex-grow leading-relaxed">
                                 {resource.description}
                             </p>
 
-                            <div className="flex items-center justify-between pt-4 border-t border-neutral-800 mt-auto">
-                                <span className="text-xs font-medium text-neutral-500 tracking-wider uppercase">
-                                    {resource.type}
-                                </span>
-                                <button className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white transition-colors">
-                                    <Download className="w-4 h-4" />
-                                    Descargar
-                                </button>
-                            </div>
+                            <a
+                                href={`/resources/${resource.filename}`}
+                                download
+                                className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white rounded-lg font-medium transition-colors border border-blue-100 hover:border-blue-600"
+                            >
+                                <Download className="w-4 h-4" />
+                                Descargar Archivo
+                            </a>
                         </div>
-                    );
-                })}
-            </div>
+                    ))}
+
+                    {filteredResources.length === 0 && (
+                        <div className="col-span-full py-16 text-center text-slate-500 italic bg-white border border-slate-200 border-dashed rounded-2xl">
+                            No se encontraron recursos que coincidan con tu búsqueda.
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

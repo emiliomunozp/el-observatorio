@@ -1,104 +1,66 @@
-import axios from 'axios';
-import { z } from 'zod';
 import Papa from 'papaparse';
 
-// ==========================================
-// ZOD SCHEMAS
-// ==========================================
+export const fetchInternalSurvey = async () => {
+    try {
+        const response = await fetch('/CSV/estudio_tfm.csv');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csvText = await response.text();
 
-const SurveyRecordSchema = z.object({
-    id: z.string().or(z.number()).transform(v => String(v)).catch(() => "unknown"),
-    Timestamp: z.string().catch(""),
-    Estudios: z.string().catch("Desconocido"),
-    Nivel_Analfabetismo_Fiscal: z.string().transform(v => parseFloat(v) || 0).catch(95),
-});
-
-const SurveyResponseSchema = z.array(SurveyRecordSchema);
-
-const ProjectRecordSchema = z.object({
-    id: z.string().or(z.number()).transform(v => String(v)).catch(() => "unknown"),
-    projectName: z.string().catch("Proyecto sin nombre"),
-    client: z.string().catch("Cliente no especificado"),
-    designPhase: z.enum(["Ideation", "Prototyping", "Testing"]).catch("Ideation"),
-    assignedTeam: z.string().catch("Sin asignar"),
-});
-
-const ProjectResponseSchema = z.array(ProjectRecordSchema);
-
-// ==========================================
-// HELPERS
-// ==========================================
-
-/**
- * Fetches and parses a public CSV from a Google Sheet URL.
- */
-const fetchAndParseCSV = async (url) => {
-    const response = await axios.get(url, { responseType: 'text' });
-
-    return new Promise((resolve, reject) => {
-        Papa.parse(response.data, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => resolve(results.data),
-            error: (error) => reject(error),
+        return new Promise((resolve, reject) => {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => resolve(results.data),
+                error: (error) => {
+                    console.error("Error parsing CSV:", error);
+                    reject(error);
+                }
+            });
         });
+    } catch (error) {
+        console.error("Failed to load survey data:", error);
+        return [];
+    }
+};
+
+export const getDashboardMetrics = async () => {
+    const data = await fetchInternalSurvey();
+    if (!data || data.length === 0) {
+        return { fiscalIlliteracy: 95, preincubatorNonUsers: 87.2, fears: [] };
+    }
+
+    const illiteracyColumn = "Si terminaras la carrera mañana, ¿sabrías cómo emitir una factura, gestionar tus impuestos o presupuestar un trabajo profesional? ";
+    const as009Column = "¿Conoces la existencia Preincubadora (AS009) en la facultad?";
+    const fearsColumn = "¿Cuál es tu mayor incertidumbre al pensar en el día después de tu graduación?";
+
+    const total = data.length;
+
+    const illiterateCount = data.filter(row => row[illiteracyColumn] !== "Sí, perfectamente.").length;
+    const fiscalIlliteracy = Math.round((illiterateCount / total) * 100);
+
+    const nonUsersCount = data.filter(row => row[as009Column] !== "Sí, la uso o la he usado." && row[as009Column] !== "Ya la he visitado").length;
+    const preincubatorNonUsers = Number(((nonUsersCount / total) * 100).toFixed(1));
+
+    const allFears = data.flatMap(row => {
+        const val = row[fearsColumn];
+        if (!val) return [];
+        return val.split(';').map(f => f.trim()).filter(Boolean);
     });
-};
 
-// ==========================================
-// DATA FETCHING FUNCTIONS
-// ==========================================
-
-export const fetchSurveyData = async () => {
-    try {
-        // Replace this placeholder URL with your actual Google Sheets CSV export link via .env.local
-        const CSV_URL = process.env.NEXT_PUBLIC_SURVEY_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ.../pub?output=csv';
-
-        // Fallback if no URL is provided locally for testing
-        if (CSV_URL.includes("...")) {
-            console.warn("Survey CSV URL not configured. Returning fallback data.");
-            return {
-                data: SurveyResponseSchema.parse([
-                    { id: "1", Timestamp: "2023-10-01", Estudios: "Diseño Gráfico", Nivel_Analfabetismo_Fiscal: "98" }
-                ]),
-                error: null
-            };
-        }
-
-        const rawData = await fetchAndParseCSV(CSV_URL);
-        const validatedData = SurveyResponseSchema.parse(rawData);
-
-        return { data: validatedData, error: null };
-    } catch (error) {
-        console.error("Error fetching or parsing survey data:", error);
-        return { data: null, error: error.message || "Failed to fetch survey data" };
+    const counted = {};
+    for (const fear of allFears) {
+        counted[fear] = (counted[fear] || 0) + 1;
     }
-};
 
-export const fetchActiveProjects = async () => {
-    try {
-        // Replace this placeholder URL with your actual Google Sheets CSV export link via .env.local
-        const CSV_URL = process.env.NEXT_PUBLIC_PROJECTS_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR.../pub?output=csv';
+    const fears = Object.keys(counted)
+        .map(key => ({ name: key, count: counted[key] }))
+        .sort((a, b) => b.count - a.count);
 
-        // Fallback if no URL is provided locally for testing
-        if (CSV_URL.includes("...")) {
-            console.warn("Projects CSV URL not configured. Returning fallback data.");
-            return {
-                data: ProjectResponseSchema.parse([
-                    { id: "P1", projectName: "Rebranding MUPAI", client: "MUPAI", designPhase: "Ideation", assignedTeam: "Equipo Alfa" },
-                    { id: "P2", projectName: "App Observatorio", client: "UCM", designPhase: "Prototyping", assignedTeam: "Equipo Beta" },
-                    { id: "P3", projectName: "Campaña Captación", client: "Facultad BBAA", designPhase: "Testing", assignedTeam: "Equipo Gamma" }
-                ]),
-                error: null
-            };
-        }
-
-        const rawData = await fetchAndParseCSV(CSV_URL);
-        const validatedData = ProjectResponseSchema.parse(rawData);
-
-        return { data: validatedData, error: null };
-    } catch (error) {
-        console.error("Error fetching or parsing active projects:", error);
-        return { data: null, error: error.message || "Failed to fetch active projects" };
-    }
+    return {
+        fiscalIlliteracy,
+        preincubatorNonUsers,
+        fears
+    };
 };

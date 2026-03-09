@@ -1,0 +1,97 @@
+{
+  "profile": {
+    "name": " Alicia Alfonso",
+    "role": "Junta Directiva",
+    "email": "alialf01@ucm.es"
+  },
+  "projects": [
+    {
+      "id": "1",
+      "projectName": "Rebranding MUPAI",
+      "client": "MUPAI",
+      "designPhase": "Ideation",
+      "assignedTeam": "Equipo Alfa"
+    },
+    {
+      "id": "2",
+      "projectName": "App Observatorio",
+      "client": "UCM",
+      "designPhase": "Prototyping",
+      "assignedTeam": "Equipo Beta"
+    },
+    {
+      "id": "3",
+      "projectName": "Campaña Captación",
+      "client": "Facultad BBAA",
+      "designPhase": "Testing",
+      "assignedTeam": "Equipo Gamma"
+    }
+  ],
+  "team": [
+    {
+      "id": "1",
+      "name": "Dra. Alicia Alfonso",
+      "role": "Junta Directiva",
+      "department": "Dirección MUDi",
+      "email": "aalfonso@ucm.es"
+    },
+    {
+      "id": "2",
+      "name": "Emilio Muñoz",
+      "role": "Junta Directiva",
+      "department": "Coordinación Estratégica",
+      "email": "emunoz@ucm.es"
+    },
+    {
+      "id": "3",
+      "name": "Prof. Carlos Ruiz",
+      "role": "Mentores (Profesores UCM)",
+      "department": "Fiscalidad y Empresa",
+      "email": "cruiz@ucm.es"
+    },
+    {
+      "id": "4",
+      "name": "Elena García",
+      "role": "Alumni",
+      "department": "Diseño de Producto",
+      "email": "elena.g@alumni.ucm.es"
+    },
+    {
+      "id": "5",
+      "name": "Marcos Torres",
+      "role": "Alumni",
+      "department": "Desarrollo Web",
+      "email": "marcos.t@alumni.ucm.es"
+    }
+  ],
+  "resources": [
+    {
+      "id": "1",
+      "title": "Plantilla de Presupuesto",
+      "description": "Formato oficial para presentar propuestas económicas a clientes respetando la estructura de Junior Empresa.",
+      "type": "Excel (.xlsx)",
+      "filename": "plantilla-presupuesto.xlsx"
+    },
+    {
+      "id": "2",
+      "title": "Guía de Facturación UCM",
+      "description": "Instrucciones paso a paso para procesar pagos a través de la infraestructura fiscal de la universidad.",
+      "type": "PDF (.pdf)",
+      "filename": "guia-facturacion.pdf"
+    },
+    {
+      "id": "3",
+      "title": "Estatutos Junior Empresa",
+      "description": "Documento fundacional y normativa interna de la asociación El Observatorio J.E.",
+      "type": "PDF (.pdf)",
+      "filename": "estatutos-je.pdf"
+    },
+    {
+      "id": "4",
+      "title": "Contrato de Prestación de Servicios",
+      "description": "Modelo de contrato legal estándar para proyectos con partes externas y entidades privadas.",
+      "type": "Word (.docx)",
+      "filename": "contrato-servicios.docx"
+    }
+  ]
+}
