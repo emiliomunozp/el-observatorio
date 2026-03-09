@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 import { getDashboardMetrics } from '@/services/dataPipeline';
-import { AlertTriangle, Info } from 'lucide-react';
+import SankeyChart from '@/components/SankeyChart';
 
-export default function Dashboard() {
+export default function Home() {
   const [data, setData] = useState({
     illiteracy: 0,
     preincubatorNonUsers: 0,
     fears: []
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [activeStep, setActiveStep] = useState(0);
+  const sectionRefs = useRef([]);
+
+  const [baseBudget, setBaseBudget] = useState(1000); // For Simulator
 
   useEffect(() => {
     async function initData() {
@@ -27,143 +29,205 @@ export default function Dashboard() {
           fears: metrics.fears
         });
       } catch (err) {
-        setError("Error loading dashboard data.");
         console.error(err);
-      } finally {
-        setLoading(false);
       }
     }
     initData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-      </div>
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveStep(Number(entry.target.dataset.step));
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -50% 0px' }
     );
-  }
 
-  if (error) {
-    return (
-      <div className="p-8 text-red-600 bg-red-50 border border-red-200 rounded-lg m-8">
-        {error}
-      </div>
-    );
-  }
+    const currentRefs = sectionRefs.current;
+    currentRefs.forEach((ref) => {
+      if (ref) observer.observe(ref);
+    });
 
-  const COLORS = ['#3b82f6', '#e2e8f0']; // Blue for unused, Light gray for used
-  const donutData = [
-    { name: 'Desconocen/No usan', value: data.preincubatorNonUsers },
-    { name: 'Usuario Activo', value: 100 - data.preincubatorNonUsers }
-  ];
+    return () => {
+      currentRefs.forEach((ref) => {
+        if (ref) observer.unobserve(ref);
+      });
+    };
+  }, []);
+
+  const renderChart = () => {
+    if (activeStep === 0) {
+      const ineData = [
+        { name: 'STEM', empleo: 85 },
+        { name: 'Artes/Humanidades', empleo: 45 },
+        { name: 'Salud', empleo: 92 },
+      ];
+      return (
+        <div key="step0" className="w-full h-96 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+          <h3 className="text-sm font-sans uppercase tracking-widest text-gray-500 mb-6 text-center">Tasa de Inserción Laboral por Rama (Mock INE)</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={ineData} layout="vertical" margin={{ left: 40, right: 20 }}>
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#666' }} width={120} />
+              <Tooltip cursor={{ fill: '#f0f0f0' }} contentStyle={{ borderRadius: '0px', border: '1px solid #1a1a1a' }} />
+              <Bar dataKey="empleo" fill="#1A1A1A" barSize={32} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    } else if (activeStep === 1) {
+      const donutData = [
+        { name: 'Evitan/Desconocen Obligaciones', value: data.illiteracy || 95 },
+        { name: 'Gestión Fluida', value: 100 - (data.illiteracy || 95) }
+      ];
+      const COLORS = ['#D32F2F', '#E5E5E5'];
+      return (
+        <div key="step1" className="w-full h-[400px] opacity-0 animate-[fadeIn_0.5s_ease-out_forwards] relative flex flex-col items-center">
+          <h3 className="text-sm font-sans uppercase tracking-widest text-gray-500 mb-4 text-center">Nivel de Analfabetismo Fiscal</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={donutData} cx="50%" cy="50%" innerRadius={100} outerRadius={140} paddingAngle={2} dataKey="value" stroke="none">
+                {donutData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: '0px', border: '1px solid #1a1a1a' }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center mt-2">
+            <span className="text-6xl font-serif text-[#D32F2F] tracking-tighter">{data.illiteracy}%</span>
+          </div>
+        </div>
+      );
+    } else if (activeStep === 2) {
+      const donutData = [
+        { name: 'Espacio Desaprovechado', value: data.preincubatorNonUsers || 87 },
+        { name: 'Potencial Extraído', value: 100 - (data.preincubatorNonUsers || 87) }
+      ];
+      const COLORS = ['#94A3B8', '#1A1A1A'];
+      return (
+        <div key="step2" className="w-full h-[400px] opacity-0 animate-[fadeIn_0.5s_ease-out_forwards] relative flex flex-col items-center">
+          <h3 className="text-sm font-sans uppercase tracking-widest text-gray-500 mb-4 text-center">Fricción de Infraestructura (AS009)</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={donutData} cx="50%" cy="50%" innerRadius={80} outerRadius={140} paddingAngle={2} dataKey="value" stroke="none">
+                {donutData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: '0px', border: '1px solid #1a1a1a' }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center mt-2">
+            <span className="text-6xl font-serif text-[#1A1A1A] tracking-tighter">{data.preincubatorNonUsers}%</span>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div key="step3" className="w-full text-center flex flex-col items-center justify-center h-full opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+          <h2 className="text-3xl font-serif text-gray-400 mb-4">El Cambio de Paradigma</h2>
+          <p className="text-gray-500 font-sans max-w-sm">La Junior Empresa permite testear el mercado en un entorno seguro antes de saltar al abismo del trabajo autónomo.</p>
+        </div>
+      )
+    }
+  };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto min-h-screen pb-24 font-sans text-slate-900 bg-slate-50">
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-2">Observatorio Estratégico</h1>
-        <p className="text-slate-500 text-lg">Métricas clave de fricción estructural en el ecosistema emprendedor.</p>
+    <div className="w-full">
+      {/* Scrollytelling Container */}
+      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 relative">
+
+        {/* Left Column (Narrative) */}
+        <div className="col-span-1 py-12">
+
+          <section ref={el => { if (el) sectionRefs.current[0] = el; }} data-step="0" className="min-h-[90vh] flex flex-col justify-center mb-16">
+            <p className="text-sm tracking-widest uppercase text-gray-400 mb-4 font-sans">Acto 1</p>
+            <h2 className="text-4xl md:text-5xl font-serif leading-tight mb-6">El Ecosistema</h2>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans mb-6">
+              Los egresados de disciplinas creativas se enfrentan a un mercado laboral radicalmente distinto al de las carreras STEM. La precariedad estructural y la intermitencia de los encargos definen sus primeros años.
+            </p>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans">
+              Mientras otras disciplinas tienen caminos pavimentados hacia la empresa tradicional, el diseñador se ve abocado, casi de manera forzosa, a la figura del trabajador autónomo.
+            </p>
+          </section>
+
+          <section ref={el => { if (el) sectionRefs.current[1] = el; }} data-step="1" className="min-h-[90vh] flex flex-col justify-center mb-16">
+            <p className="text-sm tracking-widest uppercase text-gray-400 mb-4 font-sans">Acto 2</p>
+            <h2 className="text-4xl md:text-5xl font-serif leading-tight mb-6">El Analfabetismo</h2>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans mb-6">
+              A pesar de que el marco laboral les empuja al trabajo por cuenta propia, la formación académica ignora casi por completo las herramientas fiscales, legales y de gestión empresarial.
+            </p>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans font-medium">
+              Estar preparado para diseñar no significa estar preparado para vivir del diseño.
+            </p>
+          </section>
+
+          <section ref={el => { if (el) sectionRefs.current[2] = el; }} data-step="2" className="min-h-[90vh] flex flex-col justify-center mb-16">
+            <p className="text-sm tracking-widest uppercase text-gray-400 mb-4 font-sans">Acto 3</p>
+            <h2 className="text-4xl md:text-5xl font-serif leading-tight mb-6">La Preincubadora</h2>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans mb-6">
+              La Facultad dispone de infraestructuras pioneras como el espacio AS009, diseñado específicamente para servir de &quot;sandbox&quot; o preincubadora de ideas creativas. Sin embargo, su conexión con la docencia y el alumnado está quebrada.
+            </p>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans">
+              La desconexión genera un vacío: un espacio con potencial asombroso que respira inactividad.
+            </p>
+          </section>
+
+          <section ref={el => { if (el) sectionRefs.current[3] = el; }} data-step="3" className="min-h-[90vh] flex flex-col justify-center mb-10">
+            <p className="text-sm tracking-widest uppercase text-gray-400 mb-4 font-sans">Acto 4</p>
+            <h2 className="text-4xl md:text-5xl font-serif leading-tight mb-6">La Solución</h2>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans mb-6">
+              Reconfigurar el sistema requiere algo más que buenas intenciones. Exige una estructura puente que amortigüe el impacto económico del primer encargo real.
+            </p>
+            <p className="text-lg text-gray-700 leading-relaxed font-sans">
+              El Observatorio Junior Empresa se postula como esa red de seguridad administrativa y legal.
+            </p>
+          </section>
+
+        </div>
+
+        {/* Right Column (Sticky Visuals) */}
+        <div className="col-span-1 hidden md:block">
+          <div className="sticky top-0 h-screen flex flex-col justify-center items-center p-8">
+            {renderChart()}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-
-        {/* Card 1: KPI Illiteracy */}
-        <div className="col-span-1 bg-white border border-slate-200 rounded-2xl p-8 flex flex-col justify-center relative overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 text-red-600 font-semibold mb-4 text-sm uppercase tracking-wider">
-            <AlertTriangle className="w-5 h-5" />
-            Fricción Estructural
-          </div>
-          <h2 className="text-xl font-medium text-slate-600 mb-2">Analfabetismo Fiscal</h2>
-          <div className="text-7xl font-black text-slate-900 tracking-tighter">
-            {data.illiteracy}<span className="text-4xl text-slate-400">%</span>
-          </div>
-          <p className="mt-4 text-sm text-slate-500 leading-relaxed">
-            De los alumnos se graduará sin los conocimientos administrativos mínimos para operar legalmente.
+      {/* Simulator Section */}
+      <section className="min-h-screen bg-white py-24 border-t border-black/5 px-6 relative z-10">
+        <div className="max-w-4xl mx-auto text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-serif text-[#1A1A1A] mb-4">Calcula tu propio impacto</h2>
+          <p className="text-lg text-gray-500 font-sans max-w-2xl mx-auto">
+            ¿Qué pasaría si hoy consiguieras tu primer encargo freelance de 1.000€? La fuga de capital administrativa penaliza al diseñador novato.
           </p>
         </div>
 
-        {/* Card 2: Donut Chart - Incubator */}
-        <div className="col-span-1 lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-slate-900">Uso de Preincubadora (AS009)</h2>
-            <Info className="w-4 h-4 text-slate-400" />
-          </div>
-          <p className="text-sm text-slate-500 mb-6">Penetración actual del servicio institucional.</p>
-
-          <div className="flex-1 min-h-[200px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={donutData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {donutData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => `${value.toFixed(1)}%`}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Center Text */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-bold text-slate-900">{data.preincubatorNonUsers}%</span>
-              <span className="text-xs text-slate-500 font-medium">No Usuarios</span>
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-10 max-w-sm mx-auto">
+            <label className="block text-sm font-sans uppercase tracking-widest text-gray-400 mb-2 text-center">
+              Valor de tu Encargo Base
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-serif text-xl">€</span>
+              <input
+                type="number"
+                value={baseBudget}
+                onChange={(e) => setBaseBudget(Number(e.target.value) > 0 ? Number(e.target.value) : 0)}
+                className="w-full pl-10 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 text-center text-3xl font-serif text-[#1A1A1A] focus:outline-none focus:border-black transition-colors"
+                min="0"
+                step="50"
+              />
             </div>
           </div>
-        </div>
 
-        {/* Card 3: Horizontal Bar Chart - Fears */}
-        <div className="col-span-1 lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">Miedos y Preocupaciones (Día Cero)</h2>
-            <p className="text-sm text-slate-500">Motivos de bloqueo o parálisis al finalizar la carrera (Múltiple elección).</p>
-          </div>
-
-          <div className="h-[300px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={data.fears}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-              >
-                <XAxis
-                  type="number"
-                  hide={true} // Hide numbers to make it cleaner
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={220} // Give enough room for explicit text
-                  tick={{ fill: '#475569', fontSize: 12, fontWeight: 500 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px' }}
-                />
-                <Bar
-                  dataKey="count"
-                  fill="#0ea5e9" // light blue
-                  radius={[0, 4, 4, 0]}
-                  barSize={24}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="bg-[#F9F8F6] p-8 rounded-xl border border-black/5 shadow-sm">
+            <SankeyChart budget={baseBudget} />
           </div>
         </div>
+      </section>
 
-      </div>
     </div>
   );
 }
